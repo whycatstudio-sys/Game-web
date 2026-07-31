@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What Would You Do If…? — ห้องเล่น</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt:#12211D; --felt-2:#182A24; --surface:#1C2E28; --surface-hi:#24382F;
+    --ink:#F3EFE4; --ink-dim:#93A69B;
+    --funny:#F2B705; --friend:#4FB6A5; --mindset:#B08BFF;
+    --danger:#E0654A;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--felt); color:var(--ink);
+    font-family:'Manrope',-apple-system,sans-serif;
+    min-height:100vh;
+  }
+  .font-display{ font-family:'Fraunces',serif; }
+  .font-mono{ font-family:'Space Mono',monospace; }
+
+  .wrap{ max-width:440px; margin:0 auto; min-height:100vh; padding:0 20px 40px; display:flex; flex-direction:column; }
+  .screen{ display:none; flex-direction:column; flex:1; }
+  .screen.active{ display:flex; }
+
+  h1,h2,h3{ margin:0; }
+  p{ margin:0; }
+
+  .eyebrow{ font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.25em; color:var(--ink-dim); text-transform:uppercase; }
+
+  /* ---- role choice cards ---- */
+  .role-card{
+    background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:20px;
+    padding:22px; text-align:left; width:100%; color:var(--ink); cursor:pointer;
+    display:flex; align-items:center; gap:16px; margin-bottom:14px;
+    font-family:inherit; transition:transform .15s ease, border-color .15s ease;
+  }
+  .role-card:active{ transform:scale(0.98); }
+  .role-icon{ font-size:30px; width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .role-card.host .role-icon{ background:rgba(176,139,255,0.18); }
+  .role-card.player .role-icon{ background:rgba(79,182,165,0.18); }
+  .role-card h3{ font-size:16px; margin-bottom:4px; }
+  .role-card p{ font-size:13px; color:var(--ink-dim); line-height:1.4; }
+
+  /* ---- form ---- */
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:13px; color:var(--ink-dim); margin-bottom:6px; }
+  .field input{
+    width:100%; background:var(--felt-2); border:1px solid rgba(255,255,255,0.12);
+    color:var(--ink); border-radius:12px; padding:14px 16px; font-size:15px; font-family:inherit;
+  }
+  .field input::placeholder{ color:#5c6d64; }
+  .field input:focus{ outline:2px solid var(--mindset); outline-offset:1px; }
+  .field input.code-input{ font-family:'Space Mono',monospace; letter-spacing:.3em; text-transform:uppercase; text-align:center; font-size:20px; }
+
+  .btn{
+    width:100%; border:none; border-radius:14px; padding:16px; font-size:15px; font-weight:700;
+    font-family:inherit; cursor:pointer; transition:transform .12s ease, opacity .12s ease;
+  }
+  .btn:active{ transform:scale(0.97); }
+  .btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .btn-primary-host{ background:var(--mindset); color:#1a1330; }
+  .btn-primary-player{ background:var(--friend); color:#0d2622; }
+  .btn-ghost{ background:transparent; color:var(--ink-dim); font-weight:600; padding:12px; }
+  .btn-danger-ghost{ background:transparent; color:var(--danger); font-weight:600; padding:12px; }
+
+  .back-row{ padding-top:18px; }
+  .back-btn{ background:none; border:none; color:var(--ink-dim); font-family:inherit; font-size:14px; cursor:pointer; padding:8px 0; }
+
+  .error-msg{ color:var(--danger); font-size:13px; text-align:center; margin-top:10px; min-height:16px; }
+
+  /* ---- room code stub (host lobby) ---- */
+  .stub{ position:relative; background:var(--surface-hi); border-radius:18px; padding:22px 24px; margin-bottom:22px; }
+  .stub .label{ font-size:10px; letter-spacing:.25em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:6px; }
+  .stub .code{ font-family:'Space Mono',monospace; font-size:38px; font-weight:700; letter-spacing:.12em; }
+  .stub .sub{ font-size:12px; color:var(--ink-dim); margin-top:8px; }
+  .copy-btn{ font-family:'Space Mono',monospace; font-size:12px; background:var(--felt-2); border:1px solid rgba(255,255,255,.1); color:var(--ink); padding:8px 14px; border-radius:10px; cursor:pointer; margin-top:12px; }
+
+  /* ---- player lobby: bigger, calmer code display ---- */
+  .code-big{ text-align:center; padding:34px 0 26px; }
+  .code-big .code{ font-family:'Space Mono',monospace; font-size:34px; font-weight:700; letter-spacing:.15em; }
+  .waiting-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--friend); margin-right:8px; animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:.35;} 50%{opacity:1;} }
+
+  /* ---- player list ---- */
+  .section-title{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .section-title h2{ font-size:16px; font-family:'Fraunces',serif; font-weight:600; }
+  .count-pill{ font-family:'Space Mono',monospace; font-size:12px; color:var(--ink-dim); }
+  .player-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
+  .player-row{ background:var(--surface); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:12px 16px; display:flex; align-items:center; justify-content:between; gap:8px; }
+  .player-row .name{ font-size:14px; font-weight:600; flex:1; }
+  .badge-gm{ background:var(--mindset); color:#1a1330; font-size:10px; font-weight:800; padding:3px 9px; border-radius:999px; }
+  .badge-you{ font-size:10px; color:var(--ink-dim); font-family:'Space Mono',monospace; }
+
+  .empty-state{ text-align:center; padding:30px 0; color:var(--ink-dim); font-size:13px; }
+
+  .hint{ font-size:12px; color:var(--ink-dim); text-align:center; margin-bottom:14px; }
+
+  .top-bar{ padding-top:36px; padding-bottom:22px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ SCREEN 1: ROLE CHOICE ============ -->
+  <section id="screen-role" class="screen active">
+    <div class="top-bar">
+      <p class="eyebrow">EQ &amp; Mindset Card Game</p>
+      <h1 class="font-display" style="font-size:26px; margin-top:8px;">What Would You Do If…?</h1>
+    </div>
+    <p id="conn-banner" class="hint" style="display:none; color:var(--danger); margin-bottom:14px;"></p>
+
+    <button class="role-card host" data-target="screen-host-setup">
+      <div class="role-icon">⚖️</div>
+      <div>
+        <h3>ฉันเป็น GM</h3>
+        <p>สร้างห้อง ตั้งรหัสผ่าน แล้วกดเริ่มเกมเมื่อผู้เล่นครบ</p>
+      </div>
+    </button>
+
+    <button class="role-card player" data-target="screen-player-setup">
+      <div class="role-icon">🎮</div>
+      <div>
+        <h3>ฉันเป็นผู้เล่น</h3>
+        <p>ใส่รหัสห้องกับรหัสผ่านที่ GM ให้มา แล้วรอเริ่มเกม</p>
+      </div>
+    </button>
+  </section>
+
+  <!-- ============ SCREEN 2A: HOST SETUP ============ -->
+  <section id="screen-host-setup" class="screen">
+    <div class="back-row"><button class="back-btn" data-back="screen-role">← กลับ</button></div>
+    <div style="padding:10px 0 24px;">
+      <p class="eyebrow">สำหรับ GM</p>
+      <h2 class="font-display" style="font-size:22px; margin-top:6px;">สร้างห้อง</h2>
+    </div>
+    <form id="form-host">
+      <div class="field">
+        <label>ชื่อของคุณ</label>
+        <input required maxlength="18" type="text" id="host-name" placeholder="เช่น ครูพลอย" />
+      </div>
+      <div class="field">
+        <label>ตั้งรหัสผ่านห้อง</label>
+        <input required maxlength="20" type="text" id="host-password" placeholder="ให้ผู้เล่นใช้เข้าห้อง" />
+      </div>
+      <button type="submit" class="btn btn-primary-host">สร้างห้อง →</button>
+      <p class="error-msg" id="host-error"></p>
+    </form>
+  </section>
+
+  <!-- ============ SCREEN 2B: PLAYER SETUP ============ -->
+  <section id="screen-player-setup" class="screen">
+    <div class="back-row"><button class="back-btn" data-back="screen-role">← กลับ</button></div>
+    <div style="padding:10px 0 24px;">
+      <p class="eyebrow">สำหรับผู้เล่น</p>
+      <h2 class="font-display" style="font-size:22px; margin-top:6px;">เข้าร่วมห้อง</h2>
+    </div>
+    <form id="form-player">
+      <div class="field">
+        <label>รหัสห้อง</label>
+        <input required maxlength="6" type="text" id="player-code" placeholder="ABX7K" class="code-input" />
+      </div>
+      <div class="field">
+        <label>รหัสผ่านห้อง</label>
+        <input required maxlength="20" type="text" id="player-password" placeholder="รหัสผ่านจาก GM" />
+      </div>
+      <div class="field">
+        <label>ชื่อของคุณ</label>
+        <input required maxlength="18" type="text" id="player-name" placeholder="เช่น พลอย" />
+      </div>
+      <button type="submit" class="btn btn-primary-player">เข้าร่วมห้อง →</button>
+      <p class="error-msg" id="player-error"></p>
+    </form>
+  </section>
+
+  <!-- ============ SCREEN 3A: HOST LOBBY ============ -->
+  <section id="screen-host-lobby" class="screen">
+    <div class="top-bar" style="text-align:left; padding-top:28px;">
+      <p class="eyebrow">ห้องของคุณ · GM</p>
+    </div>
+    <div class="stub">
+      <p class="label">Room Code</p>
+      <p class="code" id="host-lobby-code">------</p>
+      <p class="sub">บอกรหัสนี้ + รหัสผ่านให้ผู้เล่นเข้าห้อง</p>
+      <button class="copy-btn" id="btn-copy-host">คัดลอกรหัสห้อง</button>
+    </div>
+
+    <div class="section-title">
+      <h2>ผู้เล่นในห้อง</h2>
+      <span class="count-pill" id="host-player-count">0 คน</span>
+    </div>
+    <div class="player-list" id="host-player-list">
+      <div class="empty-state">ยังไม่มีผู้เล่นเข้าห้อง</div>
+    </div>
+
+    <p class="hint" id="host-lobby-hint">ต้องมีผู้เล่นอย่างน้อย 4 คนถึงจะเริ่มได้</p>
+    <button class="btn btn-primary-host" id="btn-start-game" disabled style="opacity:.35;">เริ่มเกม</button>
+    <button class="btn btn-danger-ghost" id="btn-close-room">ปิดห้อง</button>
+  </section>
+
+  <!-- ============ SCREEN 3B: PLAYER LOBBY (waiting room) ============ -->
+  <section id="screen-player-lobby" class="screen">
+    <div class="top-bar">
+      <p class="eyebrow">ห้อง</p>
+      <div class="code-big">
+        <p class="code" id="player-lobby-code">------</p>
+      </div>
+    </div>
+
+    <p class="hint" style="margin-bottom:20px;"><span class="waiting-dot"></span>รอ GM กดเริ่มเกม…</p>
+
+    <div class="section-title">
+      <h2>ผู้เล่นในห้อง</h2>
+      <span class="count-pill" id="player-player-count">0 คน</span>
+    </div>
+    <div class="player-list" id="player-player-list">
+      <div class="empty-state">กำลังโหลด…</div>
+    </div>
+
+    <div style="flex:1;"></div>
+    <button class="btn btn-ghost" id="btn-leave-room">ออกจากห้อง</button>
+  </section>
+
+</div>
+
+<script>
+  // ---------------------------------------------------------------
+  // ก้อนนี้ไม่พึ่งพา Firebase หรือ CDN ใด ๆ เลย — ทำงานได้เสมอ
+  // แม้สคริปต์ Firebase ด้านล่างจะโหลดไม่ได้ (เช่นในหน้าพรีวิวที่บล็อก
+  // โดเมนภายนอก) การสลับหน้าจอก็ยังกดใช้ได้ตามปกติ
+  // ---------------------------------------------------------------
+  window.$ = (id) => document.getElementById(id);
+  const screens = document.querySelectorAll(".screen");
+  window.showScreen = function(id){
+    screens.forEach(s => s.classList.toggle("active", s.id === id));
+  };
+  document.querySelectorAll("[data-target]").forEach(btn => {
+    btn.addEventListener("click", () => showScreen(btn.dataset.target));
+  });
+  document.querySelectorAll("[data-back]").forEach(btn => {
+    btn.addEventListener("click", () => showScreen(btn.dataset.back));
+  });
+
+  window.genRoomCode = function(){
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  };
+  window.escapeHtml = function(str){
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  };
+
+  // ยืนยันให้เห็นว่าหน้าเว็บพร้อมใช้งานแม้ Firebase จะยังไม่เชื่อมต่อ
+  window.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+      if (!window.__firebaseReady) {
+        const b = document.getElementById("conn-banner");
+        b.textContent = "⚠️ เชื่อมต่อระบบห้อง (Firebase) ไม่ได้ — ลองเปิดไฟล์นี้ในเบราว์เซอร์จริงแทนหน้าพรีวิว และตรวจสอบว่าใส่ Firebase config แล้ว";
+        b.style.display = "block";
+      }
+    }, 2500);
+  });
+</script>
+
+<script type="module">
+  // ---------------------------------------------------------------
+  // 🔧 ใส่ค่า Firebase config ของโปรเจกต์คุณเองตรงนี้
+  // Firebase Console → Project settings → General → Your apps → SDK setup
+  // ต้องเปิด Firestore Database + Authentication (Anonymous) ก่อนใช้งานจริง
+  // ---------------------------------------------------------------
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyATfvZTKtjVIjwB7wG43BEjiCao48M_QYA",
+    authDomain: "game-web-bb076.firebaseapp.com",
+    projectId: "game-web-bb076",
+    storageBucket: "game-web-bb076.firebasestorage.app",
+    messagingSenderId: "282185255237",
+    appId: "1:282185255237:web:35d1f998033d6a50a2162c",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  window.__firebaseReady = true;
+
+  let uid = null;
+  let currentRoomCode = null;
+  let unsubscribePlayers = null;
+
+  onAuthStateChanged(auth, (user) => { if (user) uid = user.uid; });
+  signInAnonymously(auth).catch((err) => console.error("auth failed", err));
+
+  // ใช้ helper ที่ประกาศไว้ใน script ก้อนแรก (ผูกกับ window)
+  const { $, showScreen, genRoomCode, escapeHtml } = window;
+
+  // ---------- HOST: create room ----------
+  $("form-host").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("host-error").textContent = "";
+    if (!uid) { $("host-error").textContent = "กำลังเชื่อมต่อ ลองอีกครั้งใน 1 วินาที"; return; }
+
+    const name = $("host-name").value.trim();
+    const password = $("host-password").value.trim();
+    if (!name || !password) return;
+
+    const code = genRoomCode();
+    try {
+      await setDoc(doc(db, "rooms", code), {
+        password, status: "lobby", gmPlayerId: uid,
+        turnOrder: [], currentTurnIndex: 0, createdAt: serverTimestamp(),
+      });
+      await setDoc(doc(db, "rooms", code, "players", uid), {
+        name, role: "gm", score: 0, connected: true, joinedAt: serverTimestamp(),
+      });
+      enterHostLobby(code);
+    } catch (err) {
+      $("host-error").textContent = "สร้างห้องไม่สำเร็จ: " + err.message;
+    }
+  });
+
+  // ---------- PLAYER: join room ----------
+  $("form-player").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("player-error").textContent = "";
+    if (!uid) { $("player-error").textContent = "กำลังเชื่อมต่อ ลองอีกครั้งใน 1 วินาที"; return; }
+
+    const code = $("player-code").value.trim().toUpperCase();
+    const password = $("player-password").value.trim();
+    const name = $("player-name").value.trim();
+    if (!code || !password || !name) return;
+
+    try {
+      const roomRef = doc(db, "rooms", code);
+      const snap = await getDoc(roomRef);
+      if (!snap.exists()) { $("player-error").textContent = "ไม่พบห้องนี้ ตรวจสอบรหัสห้องอีกครั้ง"; return; }
+      const room = snap.data();
+      if (room.password !== password) { $("player-error").textContent = "รหัสผ่านไม่ถูกต้อง"; return; }
+      if (room.status !== "lobby") { $("player-error").textContent = "ห้องนี้เริ่มเกมไปแล้ว"; return; }
+
+      await setDoc(doc(db, "rooms", code, "players", uid), {
+        name, role: "player", score: 0, connected: true, joinedAt: serverTimestamp(),
+      });
+      enterPlayerLobby(code);
+    } catch (err) {
+      $("player-error").textContent = "เข้าร่วมห้องไม่สำเร็จ: " + err.message;
+    }
+  });
+
+  // ---------- shared: watch players ----------
+  function watchPlayers(code, { listEl, countEl, onUpdate }){
+    if (unsubscribePlayers) unsubscribePlayers();
+    unsubscribePlayers = onSnapshot(collection(db, "rooms", code, "players"), (snap) => {
+      let rows = "";
+      let players = 0, hasGm = false;
+      snap.forEach(docSnap => {
+        const p = docSnap.data();
+        const isYou = docSnap.id === uid;
+        if (p.role === "gm") hasGm = true; else players++;
+        rows += `
+          <div class="player-row">
+            <span class="name">${escapeHtml(p.name)}</span>
+            ${isYou ? '<span class="badge-you">คุณ</span>' : ''}
+            ${p.role === "gm" ? '<span class="badge-gm">GM</span>' : ''}
+          </div>`;
+      });
+      listEl.innerHTML = rows || '<div class="empty-state">ยังไม่มีผู้เล่นเข้าห้อง</div>';
+      countEl.textContent = `${players} คน${hasGm ? " + GM" : ""}`;
+      onUpdate?.({ players, hasGm });
+    });
+  }
+
+  // ---------- HOST lobby ----------
+  function enterHostLobby(code){
+    currentRoomCode = code;
+    $("host-lobby-code").textContent = code;
+    showScreen("screen-host-lobby");
+    watchPlayers(code, {
+      listEl: $("host-player-list"),
+      countEl: $("host-player-count"),
+      onUpdate: ({ players }) => {
+        const ready = players >= 4;
+        const startBtn = $("btn-start-game");
+        startBtn.disabled = !ready;
+        startBtn.style.opacity = ready ? "1" : ".35";
+        $("host-lobby-hint").style.display = ready ? "none" : "block";
+      }
+    });
+  }
+
+  $("btn-copy-host").addEventListener("click", () => {
+    navigator.clipboard?.writeText(currentRoomCode || "");
+    const btn = $("btn-copy-host");
+    const orig = btn.textContent;
+    btn.textContent = "คัดลอกแล้ว ✓";
+    setTimeout(() => btn.textContent = orig, 1200);
+  });
+
+  $("btn-start-game").addEventListener("click", () => {
+    // Phase 2 (Turn Engine): shuffle deck, deal 3 question + 1 action card
+    // per player, set turnOrder, flip room.status = "playing".
+    alert("ต่อยอดใน Phase 2: ระบบแจกการ์ด + turn engine");
+  });
+
+  $("btn-close-room").addEventListener("click", async () => {
+    if (!currentRoomCode) return;
+    if (!confirm("ปิดห้องนี้? ผู้เล่นทั้งหมดจะหลุดออกจากห้อง")) return;
+    await updateDoc(doc(db, "rooms", currentRoomCode), { status: "closed" });
+    if (unsubscribePlayers) unsubscribePlayers();
+    currentRoomCode = null;
+    showScreen("screen-role");
+  });
+
+  // ---------- PLAYER lobby ----------
+  function enterPlayerLobby(code){
+    currentRoomCode = code;
+    $("player-lobby-code").textContent = code;
+    showScreen("screen-player-lobby");
+    watchPlayers(code, {
+      listEl: $("player-player-list"),
+      countEl: $("player-player-count"),
+    });
+  }
+
+  $("btn-leave-room").addEventListener("click", () => {
+    if (unsubscribePlayers) unsubscribePlayers();
+    currentRoomCode = null;
+    showScreen("screen-role");
+  });
+</script>
+</body>
+</html>
